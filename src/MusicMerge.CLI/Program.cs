@@ -10,7 +10,7 @@ namespace MusicMerge.CLI
 {
     public class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             var menuItems = new[]
             {
@@ -22,7 +22,7 @@ namespace MusicMerge.CLI
             new Menu("MUSIC MERGE", menuItems).Show();
         }
 
-        static void ShowList()
+        private static void ShowList()
         {
             var dir1 = Settings.Default.MusicDirectory1;
             var dir2 = Settings.Default.MusicDirectory2;
@@ -30,6 +30,8 @@ namespace MusicMerge.CLI
             if (!CheckDirectory(dir1) || !CheckDirectory(dir2))
             {
                 Console.WriteLine("Invalid directories.");
+                Console.ReadKey();
+                return;
             }
 
             var files1 = GetMusicFileNames(dir1);
@@ -40,7 +42,7 @@ namespace MusicMerge.CLI
             var allMusicFiles = musicFiles1.Concat(musicFiles2).ToArray();
 
             var musicMenuItems = new List<MenuItem>(allMusicFiles.Length);
-            var menu = new Menu("LIST OF DIFFERENCES (Enter - open, Delete - delete, Insert - restore)", musicMenuItems);
+            var menu = new Menu("LIST OF DIFFERENCES (Enter - open, Delete - delete, R - restore)", musicMenuItems);
 
             foreach (var mf in allMusicFiles)
             {
@@ -56,7 +58,7 @@ namespace MusicMerge.CLI
                     menu.Remove(menuItem);
                 });
 
-                menuItem.AddOrUpdateAction(ConsoleKey.Insert, mi => 
+                menuItem.AddOrUpdateAction(ConsoleKey.R, mi => 
                 {
                     Restore(mf);
                     menu.Remove(menuItem);
@@ -68,17 +70,11 @@ namespace MusicMerge.CLI
             menu.Show();
         }
 
-        static bool CheckDirectory(string directory)
-        {
-            return !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory);
-        }
+        private static bool CheckDirectory(string directory) => !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory);
 
-        static IEnumerable<string> GetMusicFileNames(string directory)
-        {
-            return Directory.GetFiles(directory, "*.mp3").Select(f => Path.GetFileName(f));
-        }
+        private static IEnumerable<string> GetMusicFileNames(string directory) => Directory.GetFiles(directory, "*.mp3").Select(f => Path.GetFileName(f));
 
-        static void SetDirectory1()
+        private static void SetDirectory1()
         {
             var current = Settings.Default.MusicDirectory1;
 
@@ -99,7 +95,7 @@ namespace MusicMerge.CLI
             Settings.Default.Save();
         }
 
-        static void SetDirectory2()
+        private static void SetDirectory2()
         {
             var current = Settings.Default.MusicDirectory2;
 
@@ -120,7 +116,7 @@ namespace MusicMerge.CLI
             Settings.Default.Save();
         }
 
-        static void OpenInExplorer(MusicFile musicFile)
+        private static void OpenInExplorer(MusicFile musicFile)
         {
             if (File.Exists(musicFile.FilePath))
             {
@@ -128,7 +124,7 @@ namespace MusicMerge.CLI
             }
         }
 
-        static void Delete(MusicFile musicFile)
+        private static void Delete(MusicFile musicFile)
         {
             if (File.Exists(musicFile.FilePath))
             {
@@ -136,7 +132,7 @@ namespace MusicMerge.CLI
             }
         }
 
-        static void Restore(MusicFile musicFile)
+        private static void Restore(MusicFile musicFile)
         {
             if (File.Exists(musicFile.FilePath))
             {

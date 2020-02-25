@@ -12,17 +12,25 @@ namespace MusicMerge.CLI
     {
         public static void Main(string[] args)
         {
-            var menuItems = new[]
-            {
-                new MenuItem("Show differences", mi => ShowList()),
-                new MenuItem("Set directory 1", mi => SetDirectory1()),
-                new MenuItem("Set directory 2", mi => SetDirectory2()),
-            };
-
-            new Menu("MUSIC MERGE", menuItems).Show();
+            ShowMainMenu();
         }
 
-        private static void ShowList()
+        private static void ShowMainMenu()
+        {
+            var mainMenu = new Menu("MUSIC MERGE")
+            {
+                TitleForegroundColor = ConsoleColor.Yellow
+            };
+
+            mainMenu.AddItem("Show differences", new ExplicitMenuAction(ShowListOfDifferences));
+            mainMenu.AddItem("Set directory 1", new ExplicitMenuAction(SetDirectory1));
+            mainMenu.AddItem("Set directory 2", new ExplicitMenuAction(SetDirectory2));
+            mainMenu.AddItem("Exit", new ImplicitMenuAction(mainMenu.Close));
+
+            mainMenu.Show();
+        }
+
+        private static void ShowListOfDifferences()
         {
             var dir1 = Settings.Default.MusicDirectory1;
             var dir2 = Settings.Default.MusicDirectory2;
@@ -39,35 +47,46 @@ namespace MusicMerge.CLI
 
             var musicFiles1 = files1.Except(files2).Select(f => new MusicFile(Path.Combine(dir1, f), MusicDirectory.Directory1));
             var musicFiles2 = files2.Except(files1).Select(f => new MusicFile(Path.Combine(dir2, f), MusicDirectory.Directory2));
-            var allMusicFiles = musicFiles1.Concat(musicFiles2).ToArray();
+            var differences = musicFiles1.Concat(musicFiles2).ToArray();
 
-            var musicMenuItems = new List<MenuItem>(allMusicFiles.Length);
-            var menu = new Menu("LIST OF DIFFERENCES (Enter - open, Delete - delete, R - restore)", musicMenuItems);
-
-            foreach (var mf in allMusicFiles)
+            if (!differences.Any())
             {
-                var directoryToDelete = mf.Directory == MusicDirectory.Directory1 ? dir1 : dir2;
-                var directoryToInsert = mf.Directory == MusicDirectory.Directory1 ? dir2 : dir1;
-
-                var menuItem = new MenuItem($"{mf.Name}");
-                menuItem.AddOrUpdateAction(ConsoleKey.Enter, mi => OpenInExplorer(mf));
-
-                menuItem.AddOrUpdateAction(ConsoleKey.Delete, mi => 
-                {
-                    Delete(mf);
-                    menu.Remove(menuItem);
-                });
-
-                menuItem.AddOrUpdateAction(ConsoleKey.R, mi => 
-                {
-                    Restore(mf);
-                    menu.Remove(menuItem);
-                });
-
-                menu.Add(menuItem);
+                Console.WriteLine("No differences found!\nPress any key to continue...");
+                Console.ReadKey();
             }
 
-            menu.Show();
+            var musicMenuItems = new List<MenuItem>(differences.Length);
+            var listMenu = new Menu("LIST OF DIFFERENCES (Enter - play, Delete - delete, R - restore, Esc - main menu)", musicMenuItems)
+            {
+                TitleForegroundColor = ConsoleColor.Yellow
+            };
+
+            foreach (var musicFile in differences)
+            {
+                var directoryToDelete = musicFile.Directory == MusicDirectory.Directory1 ? dir1 : dir2;
+                var directoryToInsert = musicFile.Directory == MusicDirectory.Directory1 ? dir2 : dir1;
+
+                var menuItem = new MenuItem($"{musicFile.Name}");
+                menuItem.AddOrUpdateAction(ConsoleKey.Enter, new ImplicitMenuAction(() => Play(musicFile)));
+
+                menuItem.AddOrUpdateAction(ConsoleKey.Delete, new ImplicitMenuAction(() => 
+                {
+                    Delete(musicFile);
+                    listMenu.RemoveItem(menuItem);
+                }));
+
+                menuItem.AddOrUpdateAction(ConsoleKey.R, new ImplicitMenuAction(() => 
+                {
+                    Restore(musicFile);
+                    listMenu.RemoveItem(menuItem);
+                }));
+
+                menuItem.AddOrUpdateAction(ConsoleKey.Escape, new ImplicitMenuAction(listMenu.Close));
+
+                listMenu.AddItem(menuItem);
+            }
+
+            listMenu.Show();
         }
 
         private static bool CheckDirectory(string directory) => !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory);
@@ -116,7 +135,7 @@ namespace MusicMerge.CLI
             Settings.Default.Save();
         }
 
-        private static void OpenInExplorer(MusicFile musicFile)
+        private static void Play(MusicFile musicFile)
         {
             if (File.Exists(musicFile.FilePath))
             {
@@ -142,7 +161,6 @@ namespace MusicMerge.CLI
 
                 var copyTo = Path.Combine(destinationDirectory, Path.GetFileName(musicFile.FilePath));
 
-                Console.WriteLine("Copying...");
                 File.Copy(musicFile.FilePath, copyTo);
             }
         }

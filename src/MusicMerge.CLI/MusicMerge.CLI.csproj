@@ -34,7 +34,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="CLIRedraw, Version=2.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\CLIRedraw.2.0.0-beta2\lib\netstandard2.0\CLIRedraw.dll</HintPath>
+      <HintPath>..\packages\CLIRedraw.2.0.0\lib\net461\CLIRedraw.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
